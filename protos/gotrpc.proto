@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option java_package = "net.torchz.gotrpc";
+option objc_class_prefix = "GOTRPC";
+
+package gotrpc;
+
+// The otr service definition.
+service Conversation {
+  rpc Receive (OtrMessage) returns (OtrMessage) {}
+  rpc Send (OtrMessage) returns (OtrMessage) {}
+}
+
+// The otr message
+message OtrMessage {
+  string message = 1;
+}
