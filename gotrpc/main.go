@@ -46,15 +46,15 @@ const (
 	port = ":50051"
 )
 
-// server is used to implement hellowrld.GreeterServer.
+// server is used to implement server.GreeterServer.
 type server struct{}
 
-// SayHello implements helloworld.GreeterServer
+// Receive implements server.Receive
 func (s *server) Receive(ctx context.Context, in *pb.OtrMessage) (*pb.OtrMessage, error) {
 	return &pb.OtrMessage{Message: "Hello " + in.Message}, nil
 }
 
-// SayHello implements helloworld.GreeterServer
+// Send implements server.Send
 func (s *server) Send(ctx context.Context, in *pb.OtrMessage) (*pb.OtrMessage, error) {
 	return &pb.OtrMessage{Message: "Hello " + in.Message}, nil
 }
