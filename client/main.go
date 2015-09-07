@@ -61,7 +61,18 @@ func main() {
 	if len(os.Args) > 1 {
 		name = os.Args[1]
 	}
+
+	//Stub QueryMessage
 	r, err := c.Send(context.Background(), &pb.OtrRequest{Message: name})
+	if err != nil {
+		log.Fatalf("could not greet: %v", err)
+	}
+	log.Printf("Plain: %s", r.Plain)
+	log.Printf("ToSend: %s", r.ToSend)
+	log.Printf("Error: %s", r.Error)
+
+	//Stub DHCommitMessage
+	r, err = c.Receive(context.Background(), &pb.OtrRequest{Message: r.ToSend})
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
