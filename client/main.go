@@ -54,16 +54,18 @@ func main() {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
-	c := pb.NewConversationClient(conn)
+	c := pb.NewOTRServiceClient(conn)
 
 	// Contact the server and print out its response.
 	name := defaultName
 	if len(os.Args) > 1 {
 		name = os.Args[1]
 	}
-	r, err := c.Send(context.Background(), &pb.OtrMessage{Message: name})
+	r, err := c.Send(context.Background(), &pb.OtrRequest{Message: name})
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
-	log.Printf("Greeting: %s", r.Message)
+	log.Printf("Plain: %s", r.Plain)
+	log.Printf("ToSend: %s", r.ToSend)
+	log.Printf("Error: %s", r.Error)
 }

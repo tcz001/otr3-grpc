@@ -9,7 +9,8 @@ It is generated from these files:
 	protos/gotrpc.proto
 
 It has these top-level messages:
-	OtrMessage
+	OtrResponse
+	OtrRequest
 */
 package gotrpc
 
@@ -23,98 +24,109 @@ import (
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 
-// The otr message
-type OtrMessage struct {
+// The otr Response message
+type OtrResponse struct {
+	Plain  string `protobuf:"bytes,1,opt,name=plain" json:"plain,omitempty"`
+	ToSend string `protobuf:"bytes,2,opt,name=toSend" json:"toSend,omitempty"`
+	Error  string `protobuf:"bytes,3,opt,name=error" json:"error,omitempty"`
+}
+
+func (m *OtrResponse) Reset()         { *m = OtrResponse{} }
+func (m *OtrResponse) String() string { return proto.CompactTextString(m) }
+func (*OtrResponse) ProtoMessage()    {}
+
+// The otr Request message
+type OtrRequest struct {
 	Message string `protobuf:"bytes,1,opt,name=message" json:"message,omitempty"`
 }
 
-func (m *OtrMessage) Reset()         { *m = OtrMessage{} }
-func (m *OtrMessage) String() string { return proto.CompactTextString(m) }
-func (*OtrMessage) ProtoMessage()    {}
+func (m *OtrRequest) Reset()         { *m = OtrRequest{} }
+func (m *OtrRequest) String() string { return proto.CompactTextString(m) }
+func (*OtrRequest) ProtoMessage()    {}
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ context.Context
 var _ grpc.ClientConn
 
-// Client API for Conversation service
+// Client API for OTRService service
 
-type ConversationClient interface {
-	Receive(ctx context.Context, in *OtrMessage, opts ...grpc.CallOption) (*OtrMessage, error)
-	Send(ctx context.Context, in *OtrMessage, opts ...grpc.CallOption) (*OtrMessage, error)
+type OTRServiceClient interface {
+	Receive(ctx context.Context, in *OtrRequest, opts ...grpc.CallOption) (*OtrResponse, error)
+	Send(ctx context.Context, in *OtrRequest, opts ...grpc.CallOption) (*OtrResponse, error)
 }
 
-type conversationClient struct {
+type oTRServiceClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewConversationClient(cc *grpc.ClientConn) ConversationClient {
-	return &conversationClient{cc}
+func NewOTRServiceClient(cc *grpc.ClientConn) OTRServiceClient {
+	return &oTRServiceClient{cc}
 }
 
-func (c *conversationClient) Receive(ctx context.Context, in *OtrMessage, opts ...grpc.CallOption) (*OtrMessage, error) {
-	out := new(OtrMessage)
-	err := grpc.Invoke(ctx, "/gotrpc.Conversation/Receive", in, out, c.cc, opts...)
+func (c *oTRServiceClient) Receive(ctx context.Context, in *OtrRequest, opts ...grpc.CallOption) (*OtrResponse, error) {
+	out := new(OtrResponse)
+	err := grpc.Invoke(ctx, "/gotrpc.OTRService/Receive", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *conversationClient) Send(ctx context.Context, in *OtrMessage, opts ...grpc.CallOption) (*OtrMessage, error) {
-	out := new(OtrMessage)
-	err := grpc.Invoke(ctx, "/gotrpc.Conversation/Send", in, out, c.cc, opts...)
+func (c *oTRServiceClient) Send(ctx context.Context, in *OtrRequest, opts ...grpc.CallOption) (*OtrResponse, error) {
+	out := new(OtrResponse)
+	err := grpc.Invoke(ctx, "/gotrpc.OTRService/Send", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// Server API for Conversation service
+// Server API for OTRService service
 
-type ConversationServer interface {
-	Receive(context.Context, *OtrMessage) (*OtrMessage, error)
-	Send(context.Context, *OtrMessage) (*OtrMessage, error)
+type OTRServiceServer interface {
+	Receive(context.Context, *OtrRequest) (*OtrResponse, error)
+	Send(context.Context, *OtrRequest) (*OtrResponse, error)
 }
 
-func RegisterConversationServer(s *grpc.Server, srv ConversationServer) {
-	s.RegisterService(&_Conversation_serviceDesc, srv)
+func RegisterOTRServiceServer(s *grpc.Server, srv OTRServiceServer) {
+	s.RegisterService(&_OTRService_serviceDesc, srv)
 }
 
-func _Conversation_Receive_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
-	in := new(OtrMessage)
+func _OTRService_Receive_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+	in := new(OtrRequest)
 	if err := codec.Unmarshal(buf, in); err != nil {
 		return nil, err
 	}
-	out, err := srv.(ConversationServer).Receive(ctx, in)
+	out, err := srv.(OTRServiceServer).Receive(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func _Conversation_Send_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
-	in := new(OtrMessage)
+func _OTRService_Send_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+	in := new(OtrRequest)
 	if err := codec.Unmarshal(buf, in); err != nil {
 		return nil, err
 	}
-	out, err := srv.(ConversationServer).Send(ctx, in)
+	out, err := srv.(OTRServiceServer).Send(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-var _Conversation_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "gotrpc.Conversation",
-	HandlerType: (*ConversationServer)(nil),
+var _OTRService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "gotrpc.OTRService",
+	HandlerType: (*OTRServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "Receive",
-			Handler:    _Conversation_Receive_Handler,
+			Handler:    _OTRService_Receive_Handler,
 		},
 		{
 			MethodName: "Send",
-			Handler:    _Conversation_Send_Handler,
+			Handler:    _OTRService_Send_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{},

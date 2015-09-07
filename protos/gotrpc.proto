@@ -6,12 +6,19 @@ option objc_class_prefix = "GOTRPC";
 package gotrpc;
 
 // The otr service definition.
-service Conversation {
-  rpc Receive (OtrMessage) returns (OtrMessage) {}
-  rpc Send (OtrMessage) returns (OtrMessage) {}
+service OTRService {
+  rpc Receive (OtrRequest) returns (OtrResponse) {}
+  rpc Send (OtrRequest) returns (OtrResponse) {}
 }
 
-// The otr message
-message OtrMessage {
+// The otr Response message
+message OtrResponse {
+  string plain = 1;
+  string toSend = 2;
+  string error = 3;
+}
+
+// The otr Request message
+message OtrRequest {
   string message = 1;
 }

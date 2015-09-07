@@ -34,10 +34,12 @@
 package main
 
 import (
+	"crypto/rand"
 	"log"
 	"net"
 
 	pb "github.com/tcz001/otr3-grpc/protos"
+	"github.com/twstrike/otr3"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -46,17 +48,32 @@ const (
 	port = ":50051"
 )
 
-// server is used to implement server.GreeterServer.
-type server struct{}
+// server is used to implement server.OTRService.
+type server struct {
+	c *otr3.Conversation
+}
 
 // Receive implements server.Receive
-func (s *server) Receive(ctx context.Context, in *pb.OtrMessage) (*pb.OtrMessage, error) {
-	return &pb.OtrMessage{Message: "Hello " + in.Message}, nil
+func (s *server) Receive(ctx context.Context, in *pb.OtrRequest) (*pb.OtrResponse, error) {
+	s.ensureConv()
+	plain, toSend, err := s.c.Receive(otr3.ValidMessage(in.Message))
+	if err != nil {
+		return &pb.OtrResponse{Error: err.Error()}, nil
+	}
+	if toSend == nil {
+		return &pb.OtrResponse{Plain: string(plain)}, nil
+	}
+	return &pb.OtrResponse{Plain: string(plain), ToSend: string(toSend[0])}, nil
 }
 
 // Send implements server.Send
-func (s *server) Send(ctx context.Context, in *pb.OtrMessage) (*pb.OtrMessage, error) {
-	return &pb.OtrMessage{Message: "Hello " + in.Message}, nil
+func (s *server) Send(ctx context.Context, in *pb.OtrRequest) (*pb.OtrResponse, error) {
+	s.ensureConv()
+	toSend, err := s.c.Send(otr3.ValidMessage(in.Message))
+	if err != nil {
+		return &pb.OtrResponse{Error: err.Error()}, nil
+	}
+	return &pb.OtrResponse{ToSend: string(toSend[0])}, nil
 }
 
 func main() {
@@ -65,6 +82,24 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterConversationServer(s, &server{})
+	pb.RegisterOTRServiceServer(s, &server{})
 	s.Serve(lis)
+}
+
+func (s *server) ensureConv() {
+	if s.c == nil {
+		c := otr3.Conversation{}
+
+		// You will need to prepare a long-term PrivateKey for otr conversation handshakes.
+		priv := &otr3.PrivateKey{}
+		priv.Generate(rand.Reader)
+		c.SetKeys(priv, nil)
+
+		// set the Policies.
+		c.Policies.AllowV2()
+		c.Policies.AllowV3()
+		c.Policies.RequireEncryption()
+
+		s.c = &c
+	}
 }
