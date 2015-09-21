@@ -9,8 +9,10 @@ It is generated from these files:
 	protos/gotrpc.proto
 
 It has these top-level messages:
-	OtrResponse
-	OtrRequest
+	OtrMsgResponse
+	OtrMsgRequest
+	OtrConvRequest
+	OtrConvResponse
 */
 package gotrpc
 
@@ -25,24 +27,42 @@ import (
 var _ = proto.Marshal
 
 // The otr Response message
-type OtrResponse struct {
+type OtrMsgResponse struct {
 	Plain  string `protobuf:"bytes,1,opt,name=plain" json:"plain,omitempty"`
 	ToSend string `protobuf:"bytes,2,opt,name=toSend" json:"toSend,omitempty"`
 	Error  string `protobuf:"bytes,3,opt,name=error" json:"error,omitempty"`
 }
 
-func (m *OtrResponse) Reset()         { *m = OtrResponse{} }
-func (m *OtrResponse) String() string { return proto.CompactTextString(m) }
-func (*OtrResponse) ProtoMessage()    {}
+func (m *OtrMsgResponse) Reset()         { *m = OtrMsgResponse{} }
+func (m *OtrMsgResponse) String() string { return proto.CompactTextString(m) }
+func (*OtrMsgResponse) ProtoMessage()    {}
 
 // The otr Request message
-type OtrRequest struct {
-	Message string `protobuf:"bytes,1,opt,name=message" json:"message,omitempty"`
+type OtrMsgRequest struct {
+	Uuid    string `protobuf:"bytes,1,opt,name=uuid" json:"uuid,omitempty"`
+	Message string `protobuf:"bytes,2,opt,name=message" json:"message,omitempty"`
 }
 
-func (m *OtrRequest) Reset()         { *m = OtrRequest{} }
-func (m *OtrRequest) String() string { return proto.CompactTextString(m) }
-func (*OtrRequest) ProtoMessage()    {}
+func (m *OtrMsgRequest) Reset()         { *m = OtrMsgRequest{} }
+func (m *OtrMsgRequest) String() string { return proto.CompactTextString(m) }
+func (*OtrMsgRequest) ProtoMessage()    {}
+
+type OtrConvRequest struct {
+	Uuid string `protobuf:"bytes,1,opt,name=uuid" json:"uuid,omitempty"`
+}
+
+func (m *OtrConvRequest) Reset()         { *m = OtrConvRequest{} }
+func (m *OtrConvRequest) String() string { return proto.CompactTextString(m) }
+func (*OtrConvRequest) ProtoMessage()    {}
+
+type OtrConvResponse struct {
+	Uuid  string `protobuf:"bytes,1,opt,name=uuid" json:"uuid,omitempty"`
+	Error string `protobuf:"bytes,2,opt,name=error" json:"error,omitempty"`
+}
+
+func (m *OtrConvResponse) Reset()         { *m = OtrConvResponse{} }
+func (m *OtrConvResponse) String() string { return proto.CompactTextString(m) }
+func (*OtrConvResponse) ProtoMessage()    {}
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ context.Context
@@ -51,8 +71,9 @@ var _ grpc.ClientConn
 // Client API for OTRService service
 
 type OTRServiceClient interface {
-	Receive(ctx context.Context, in *OtrRequest, opts ...grpc.CallOption) (*OtrResponse, error)
-	Send(ctx context.Context, in *OtrRequest, opts ...grpc.CallOption) (*OtrResponse, error)
+	NewConv(ctx context.Context, in *OtrConvRequest, opts ...grpc.CallOption) (*OtrConvResponse, error)
+	Receive(ctx context.Context, in *OtrMsgRequest, opts ...grpc.CallOption) (*OtrMsgResponse, error)
+	Send(ctx context.Context, in *OtrMsgRequest, opts ...grpc.CallOption) (*OtrMsgResponse, error)
 }
 
 type oTRServiceClient struct {
@@ -63,8 +84,17 @@ func NewOTRServiceClient(cc *grpc.ClientConn) OTRServiceClient {
 	return &oTRServiceClient{cc}
 }
 
-func (c *oTRServiceClient) Receive(ctx context.Context, in *OtrRequest, opts ...grpc.CallOption) (*OtrResponse, error) {
-	out := new(OtrResponse)
+func (c *oTRServiceClient) NewConv(ctx context.Context, in *OtrConvRequest, opts ...grpc.CallOption) (*OtrConvResponse, error) {
+	out := new(OtrConvResponse)
+	err := grpc.Invoke(ctx, "/gotrpc.OTRService/NewConv", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *oTRServiceClient) Receive(ctx context.Context, in *OtrMsgRequest, opts ...grpc.CallOption) (*OtrMsgResponse, error) {
+	out := new(OtrMsgResponse)
 	err := grpc.Invoke(ctx, "/gotrpc.OTRService/Receive", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -72,8 +102,8 @@ func (c *oTRServiceClient) Receive(ctx context.Context, in *OtrRequest, opts ...
 	return out, nil
 }
 
-func (c *oTRServiceClient) Send(ctx context.Context, in *OtrRequest, opts ...grpc.CallOption) (*OtrResponse, error) {
-	out := new(OtrResponse)
+func (c *oTRServiceClient) Send(ctx context.Context, in *OtrMsgRequest, opts ...grpc.CallOption) (*OtrMsgResponse, error) {
+	out := new(OtrMsgResponse)
 	err := grpc.Invoke(ctx, "/gotrpc.OTRService/Send", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -84,16 +114,29 @@ func (c *oTRServiceClient) Send(ctx context.Context, in *OtrRequest, opts ...grp
 // Server API for OTRService service
 
 type OTRServiceServer interface {
-	Receive(context.Context, *OtrRequest) (*OtrResponse, error)
-	Send(context.Context, *OtrRequest) (*OtrResponse, error)
+	NewConv(context.Context, *OtrConvRequest) (*OtrConvResponse, error)
+	Receive(context.Context, *OtrMsgRequest) (*OtrMsgResponse, error)
+	Send(context.Context, *OtrMsgRequest) (*OtrMsgResponse, error)
 }
 
 func RegisterOTRServiceServer(s *grpc.Server, srv OTRServiceServer) {
 	s.RegisterService(&_OTRService_serviceDesc, srv)
 }
 
+func _OTRService_NewConv_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+	in := new(OtrConvRequest)
+	if err := codec.Unmarshal(buf, in); err != nil {
+		return nil, err
+	}
+	out, err := srv.(OTRServiceServer).NewConv(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func _OTRService_Receive_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
-	in := new(OtrRequest)
+	in := new(OtrMsgRequest)
 	if err := codec.Unmarshal(buf, in); err != nil {
 		return nil, err
 	}
@@ -105,7 +148,7 @@ func _OTRService_Receive_Handler(srv interface{}, ctx context.Context, codec grp
 }
 
 func _OTRService_Send_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
-	in := new(OtrRequest)
+	in := new(OtrMsgRequest)
 	if err := codec.Unmarshal(buf, in); err != nil {
 		return nil, err
 	}
@@ -120,6 +163,10 @@ var _OTRService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "gotrpc.OTRService",
 	HandlerType: (*OTRServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "NewConv",
+			Handler:    _OTRService_NewConv_Handler,
+		},
 		{
 			MethodName: "Receive",
 			Handler:    _OTRService_Receive_Handler,

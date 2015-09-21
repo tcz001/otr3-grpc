@@ -35,9 +35,11 @@ package main
 
 import (
 	"crypto/rand"
+	"fmt"
 	"log"
 	"net"
 
+	"github.com/nu7hatch/gouuid"
 	pb "github.com/tcz001/otr3-grpc/protos"
 	"github.com/twstrike/otr3"
 	"golang.org/x/net/context"
@@ -50,30 +52,51 @@ const (
 
 // server is used to implement server.OTRService.
 type server struct {
-	c *otr3.Conversation
+	convs map[string]*otr3.Conversation
+}
+
+// NewConv implements server.Receive
+func (s *server) NewConv(ctx context.Context, in *pb.OtrConvRequest) (*pb.OtrConvResponse, error) {
+	c := otr3.Conversation{}
+
+	// You will need to prepare a long-term PrivateKey for otr conversation handshakes.
+	priv := &otr3.PrivateKey{}
+	priv.Generate(rand.Reader)
+	c.SetKeys(priv, nil)
+
+	// set the Policies.
+	c.Policies.AllowV2()
+	c.Policies.AllowV3()
+	c.Policies.RequireEncryption()
+	token, _ := uuid.NewV4()
+	s.convs[token.String()] = &c
+	fmt.Println("NewConv uuid:", token.String())
+	return &pb.OtrConvResponse{Uuid: token.String()}, nil
 }
 
 // Receive implements server.Receive
-func (s *server) Receive(ctx context.Context, in *pb.OtrRequest) (*pb.OtrResponse, error) {
-	s.ensureConv()
-	plain, toSend, err := s.c.Receive(otr3.ValidMessage(in.Message))
+func (s *server) Receive(ctx context.Context, in *pb.OtrMsgRequest) (*pb.OtrMsgResponse, error) {
+	fmt.Println("Receive Message Conv uuid:", in.Uuid)
+	conv := s.convs[in.Uuid]
+	plain, toSend, err := conv.Receive(otr3.ValidMessage(in.Message))
 	if err != nil {
-		return &pb.OtrResponse{Error: err.Error()}, nil
+		return &pb.OtrMsgResponse{Error: err.Error()}, nil
 	}
 	if toSend == nil {
-		return &pb.OtrResponse{Plain: string(plain)}, nil
+		return &pb.OtrMsgResponse{Plain: string(plain)}, nil
 	}
-	return &pb.OtrResponse{Plain: string(plain), ToSend: string(toSend[0])}, nil
+	return &pb.OtrMsgResponse{Plain: string(plain), ToSend: string(toSend[0])}, nil
 }
 
 // Send implements server.Send
-func (s *server) Send(ctx context.Context, in *pb.OtrRequest) (*pb.OtrResponse, error) {
-	s.ensureConv()
-	toSend, err := s.c.Send(otr3.ValidMessage(in.Message))
+func (s *server) Send(ctx context.Context, in *pb.OtrMsgRequest) (*pb.OtrMsgResponse, error) {
+	fmt.Println("Send Message Conv uuid:", in.Uuid)
+	conv := s.convs[in.Uuid]
+	toSend, err := conv.Send(otr3.ValidMessage(in.Message))
 	if err != nil {
-		return &pb.OtrResponse{Error: err.Error()}, nil
+		return &pb.OtrMsgResponse{Error: err.Error()}, nil
 	}
-	return &pb.OtrResponse{ToSend: string(toSend[0])}, nil
+	return &pb.OtrMsgResponse{ToSend: string(toSend[0])}, nil
 }
 
 func main() {
@@ -82,24 +105,6 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterOTRServiceServer(s, &server{})
+	pb.RegisterOTRServiceServer(s, &server{make(map[string]*otr3.Conversation)})
 	s.Serve(lis)
-}
-
-func (s *server) ensureConv() {
-	if s.c == nil {
-		c := otr3.Conversation{}
-
-		// You will need to prepare a long-term PrivateKey for otr conversation handshakes.
-		priv := &otr3.PrivateKey{}
-		priv.Generate(rand.Reader)
-		c.SetKeys(priv, nil)
-
-		// set the Policies.
-		c.Policies.AllowV2()
-		c.Policies.AllowV3()
-		c.Policies.RequireEncryption()
-
-		s.c = &c
-	}
 }

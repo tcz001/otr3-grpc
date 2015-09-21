@@ -7,18 +7,29 @@ package gotrpc;
 
 // The otr service definition.
 service OTRService {
-  rpc Receive (OtrRequest) returns (OtrResponse) {}
-  rpc Send (OtrRequest) returns (OtrResponse) {}
+  rpc NewConv (OtrConvRequest) returns (OtrConvResponse) {}
+  rpc Receive (OtrMsgRequest) returns (OtrMsgResponse) {}
+  rpc Send (OtrMsgRequest) returns (OtrMsgResponse) {}
 }
 
 // The otr Response message
-message OtrResponse {
+message OtrMsgResponse {
   string plain = 1;
   string toSend = 2;
   string error = 3;
 }
 
 // The otr Request message
-message OtrRequest {
-  string message = 1;
+message OtrMsgRequest {
+  string uuid = 1;
+  string message = 2;
+}
+
+message OtrConvRequest {
+  string uuid = 1;
+}
+
+message OtrConvResponse {
+  string uuid = 1;
+  string error = 2;
 }

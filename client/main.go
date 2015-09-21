@@ -49,7 +49,7 @@ const (
 
 func main() {
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(address)
+	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -62,8 +62,10 @@ func main() {
 		name = os.Args[1]
 	}
 
+	conv, err := c.NewConv(context.Background(), &pb.OtrConvRequest{})
+
 	//Stub QueryMessage
-	r, err := c.Send(context.Background(), &pb.OtrRequest{Message: name})
+	r, err := c.Send(context.Background(), &pb.OtrMsgRequest{Uuid: conv.Uuid, Message: name})
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
@@ -72,7 +74,7 @@ func main() {
 	log.Printf("Error: %s", r.Error)
 
 	//Stub DHCommitMessage
-	r, err = c.Receive(context.Background(), &pb.OtrRequest{Message: r.ToSend})
+	r, err = c.Receive(context.Background(), &pb.OtrMsgRequest{Uuid: conv.Uuid, Message: r.ToSend})
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
